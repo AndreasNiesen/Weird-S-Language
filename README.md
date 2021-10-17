@@ -3,7 +3,7 @@
 <br>
 
 Upcoming:
-- Comments
+- Comparisons
 - (Branching)
 - (Loops)
 
@@ -17,22 +17,11 @@ Possible operations so far:
  - DUMP ("."): Prints last entry on stack and either discards entry (POP) or keeps it (END).<br>
  - POP ("\\"): Removes last entry from stack.<br>
 
+Single line comments are supported, marked by "#".
+
 <br>
 
 Quick example program:
-```
-/ 35
-/ 34
-+ ^
-/ 512
-/ 92
-- \
-+ ^
-. ^
-^
-```
-
-Explained:
 ```
 / 35    # Pushes 35.
 / 34    # Pushes 34.

@@ -150,14 +150,17 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
 void readFile(char *input, std::vector<std::string> &output) {
   std::fstream fs;
   std::string buffer;
-  fs.open(input, std::fstream::in | std::fstream::binary);
 
+  fs.open(input, std::fstream::in | std::fstream::binary);
   if (!fs.is_open()) {
     std::cout << "[ERROR] Could not open \"" << input << "\"" << std::endl;
     exit(0);
   }
 
   while(std::getline(fs, buffer)) {
+    // if comment (marked by "#" is found, remove it.)
+    buffer = buffer.substr(0, buffer.find("#"));
+    if (buffer.length() == 0) continue;
     output.push_back(buffer);
   }
 
