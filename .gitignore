@@ -1,4 +1,4 @@
 .vscode
 compile.sh
 weirdSLang
-test.txt
+test*
