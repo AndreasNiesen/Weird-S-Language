@@ -12,11 +12,13 @@ enum {
 };
 
 enum OP {
-  END,          // - End of the program. (No Operation as second argument)
-  PUSH,         // / Pushes second argument onto the stack. (currently only ints, will add support for characters later on).
-  ADD,          // + Adds (and removes if OP::POP is second argument) the last two entries on the stack and pushes the result.
-  DUMP,         // . Prints last entry on stack and either discards entry (OP::POP) or keeps it (OP::END).
-  POP,          // \ Removes entry at stackCounter / last entry from stack.
+  NOP = -1, //   Not accessible from the outside.
+  END,      // ^ End of the program. (No Operation as second argument)
+  PUSH,     // / Pushes second argument onto the stack. (currently only ints, will add support for characters later on).
+  ADD,      // + Adds (and removes if OP::POP is second argument) the last two entries on the stack and pushes the result.
+  SUB,      // - Subtracts (and removes if OP::POP is second argument) the last from the second to last entry on the stack and pushes the result.
+  DUMP,     // . Prints last entry on stack and either discards entry (OP::POP) or keeps it (OP::END).
+  POP,      // \ Removes entry at stackCounter / last entry from stack.
   count,
 };
 
@@ -119,13 +121,13 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
   readFile(input, file_contents);
 
   for (std::string buffer : file_contents) {
-    static_assert(OP::count == 5, "Define all operations!");
+    static_assert(OP::count == 6, "Define all operations!");
     switch((int)buffer[0]) {
       case 43:  // "+"
                 prog.push_back({OP::ADD, buffer[2] == '\\' ? OP::POP : OP::END});
                 break;
       case 45:  // "-"
-                prog.push_back({OP::END, -1});
+                prog.push_back({OP::SUB, buffer[2] == '\\' ? OP::POP : OP::END});
                 break;
       case 46:  // "."
                 prog.push_back({OP::DUMP, buffer[2] == '-' ? OP::END : OP::POP});
@@ -134,7 +136,10 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
                 prog.push_back({OP::PUSH, atoi(buffer.c_str() + 2)});
                 break;
       case 92:  // "\"
-                prog.push_back({OP::POP, -1});
+                prog.push_back({OP::POP, OP::NOP});
+                break;
+      case 94:  // "^"
+                prog.push_back({OP::END, OP::NOP});
                 break;
       default:  std::cout << "[ERROR] Could not understand \"" << buffer << "\"" << std::endl;
                 exit(0);
@@ -165,7 +170,7 @@ void simulateProgram(std::vector<std::array<int, 2>> &prog) {
 
   int bufferA, bufferB;
 
-  static_assert(OP::count == 5, "Define all operations!");
+  static_assert(OP::count == 6, "Define all operations!");
 
   for (auto cmd : prog) {
     switch(cmd[0]) {
@@ -185,6 +190,19 @@ void simulateProgram(std::vector<std::array<int, 2>> &prog) {
                         exit(0);
                       }
                       stack[stackCounter] = bufferA + bufferB;
+                      break;
+      case OP::SUB:   if (cmd[1] == OP::END) {
+                        bufferA = stack[stackCounter];
+                        bufferB = stack[stackCounter-1];
+                        stackCounter++;
+                      } else if (cmd[1] == OP::POP) {
+                        bufferA = stack[stackCounter];
+                        bufferB = stack[--stackCounter];
+                      } else {
+                        std::cout << "[ERROR] SUB needs second argument." << std::endl;
+                        exit(0);
+                      }
+                      stack[stackCounter] = bufferB - bufferA;
                       break;
       case OP::DUMP:  std::cout << stack[stackCounter] << std::endl;
                       if (cmd[1] == OP::POP) stackCounter--;
