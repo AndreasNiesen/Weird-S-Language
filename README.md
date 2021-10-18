@@ -3,7 +3,9 @@
 <br>
 
 Upcoming:
-- Loops
+- save strings
+- print strings
+- (string comparisons?)
 
 <br>
 
@@ -22,7 +24,7 @@ Single line comments are supported, marked by "#".
 
 <br>
 
-Simple example program:
+Simple example:
 ```
 / 35    # Pushes 35.
 / 34    # Pushes 34.
@@ -37,7 +39,7 @@ Simple example program:
 
 <br>
 
-Branching example program:
+Branching example:
 ```
 / 500   # Pushes 500.
 / 50    # Pushes 50.
@@ -54,5 +56,21 @@ Branching example program:
 ^ OUT   # End(point) of the OUT labeled jump.
 / -1    # Pushes -1.
 . ^     # Prints -1.
+^       # End of program.
+```
+
+<br>
+
+Looping example:
+```
+/ 100   # Pushes 100.
+^ END   # Marks END.
+. ^     # Prints last value on stack (100, 99, ..., 91).
+/ 1     # Pushes 1.
+- \     # Subtracts and removes last two stack values and pushes result.
+/ 90    # Pushes 90.
+> END   # If second to last stack value > 90 jumps to END. (removes 90 from stack).
+/ 1337  # Pushes 1337.
+. ^     # Prints 1337 as expression of success!
 ^       # End of program.
 ```
