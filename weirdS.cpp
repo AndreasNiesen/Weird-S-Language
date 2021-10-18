@@ -19,6 +19,9 @@ enum OP {
   SUB,      // - Subtracts (and removes if OP::POP is second argument) the last from the second to last entry on the stack and pushes the result.
   DUMP,     // . Prints last entry on stack and either discards entry (OP::POP) or keeps it (OP::END).
   POP,      // \ Removes entry at stackCounter / last entry from stack.
+  GT,       // > Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last > last.
+  EQ,       // = Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last == last.
+  LT,       // < Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last < last.
   count,
 };
 
@@ -26,6 +29,8 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog);
 void readFile(char *input, std::vector<std::string> &output);
 void simulateProgram(std::vector<std::array<int, 2>> &prog);
 void compileProgram(std::vector<std::array<int, 2>> &prog);
+int matchingIDsLine(std::vector<std::string> &file_contents, std::string &branchID, int minIndex);
+void printUsage(char *name);
 
 int main(int argc, char **argv) {
   int i = 0;
@@ -46,6 +51,8 @@ int main(int argc, char **argv) {
     {"compile", 3},
     {"com", 3},
     {"c", 3},
+    {"help", 4},
+    {"h", 4},
   };
 
   while (argv[++i] != nullptr) {
@@ -55,7 +62,8 @@ int main(int argc, char **argv) {
           case 0: // Input File
                   if (input != nullptr) {
                     std::cout << "[ERROR] Multiple input files given: \"";
-                    std::cout << input << "\" and \"" << argv[i + 1] << "\"" << std::endl;
+                    std::cout << input << "\" and \"" << argv[i + 1] << "\"\n" << std::endl;
+                    printUsage(argv[0]);
                     return(0);
                   }
                   input = argv[++i];
@@ -64,7 +72,8 @@ int main(int argc, char **argv) {
           case 1: // Output File
                   if (compilationOutput != nullptr) {
                     std::cout << "[ERROR] Multiple output files given: \"";
-                    std::cout << compilationOutput << "\" and \"" << argv[i + 1] << "\"" << std::endl;
+                    std::cout << compilationOutput << "\" and \"" << argv[i + 1] << "\"\n" << std::endl;
+                    printUsage(argv[0]);
                     return(0);
                   }
                   compilationOutput = argv[++i];
@@ -76,13 +85,17 @@ int main(int argc, char **argv) {
           case 3: // Activate Compilation mode
                   mode = COMPILATION;
                   break;
+          case 4: // print help and exit.
+                  printUsage(argv[0]);
+                  exit(0);
         }
       }
     } else {
       // If no option-name is given, assume Input File
       if (input != nullptr) {
         std::cout << "[ERROR] Multiple input files given: \"";
-        std::cout << input << "\" and \"" << argv[i] << "\"" << std::endl;
+        std::cout << input << "\" and \"" << argv[i] << "\"\n" << std::endl;
+        printUsage(argv[0]);
         return(0);
       }
       input = argv[i];
@@ -91,7 +104,8 @@ int main(int argc, char **argv) {
   }
 
   if (input == nullptr) {
-    std::cout << "[ERROR] No input file given" << std::endl;
+    std::cout << "[ERROR] No input file given\n" << std::endl;
+    printUsage(argv[0]);
     return(0);
   }
 
@@ -109,7 +123,8 @@ int main(int argc, char **argv) {
                       break;
     case COMPILATION: compileProgram(prog);
                       break;
-    default:  std::cout << "[ERROR] Bad mode.";
+    default:  std::cout << "[ERROR] Bad mode.\n" << std::endl;
+              printUsage(argv[0]);
               exit(0);
   }
 
@@ -119,9 +134,13 @@ int main(int argc, char **argv) {
 void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
   std::vector<std::string> file_contents;
   readFile(input, file_contents);
+  std::string branchID;
+  int branchEndLine;
 
-  for (std::string buffer : file_contents) {
-    static_assert(OP::count == 6, "Define all operations!");
+  for (int i = 0; i < file_contents.size(); i++) {
+    static_assert(OP::count == 9, "Define all operations!");
+
+    std::string buffer = file_contents[i];
     switch((int)buffer[0]) {
       case 43:  // "+"
                 prog.push_back({OP::ADD, buffer[2] == '\\' ? OP::POP : OP::END});
@@ -135,10 +154,41 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
       case 47:  // "/"
                 prog.push_back({OP::PUSH, atoi(buffer.c_str() + 2)});
                 break;
+      case 60:  // <
+                branchID = buffer.substr(2, buffer.find(" ", 2));  // make sure branchID does not contain trailing whitespace.
+                branchEndLine = matchingIDsLine(file_contents, branchID, i + 1);
+                if (branchEndLine == -1) {
+                  std::cout << "[ERROR] LT: Did not find matching branch-ID for \"" << branchID << "\"" << std::endl;
+                  exit(0);
+                }
+                prog.push_back({OP::LT, branchEndLine});
+                break;
+      case 61:  // =
+                branchID = buffer.substr(2, buffer.find(" ", 2));
+                branchEndLine = matchingIDsLine(file_contents, branchID, i + 1);
+                if (branchEndLine == -1) {
+                  std::cout << "[ERROR] EQ: Did not find matching branch-ID for \"" << branchID << "\"" << std::endl;
+                  exit(0);
+                }
+                prog.push_back({OP::EQ, branchEndLine});
+                break;
+      case 62:  // >
+                branchID = buffer.substr(2, buffer.find(" ", 2));
+                branchEndLine = matchingIDsLine(file_contents, branchID, i + 1);
+                if (branchEndLine == -1) {
+                  std::cout << "[ERROR] GT: Did not find matching branch-ID for \"" << branchID << "\"" << std::endl;
+                  exit(0);
+                }
+                prog.push_back({OP::GT, branchEndLine});
+                break;
       case 92:  // "\"
                 prog.push_back({OP::POP, OP::NOP});
                 break;
       case 94:  // "^"
+                if (buffer.length() > 2 && buffer[3] != ' ') {
+                  prog.push_back({OP::NOP, OP::NOP});
+                  break;
+                }
                 prog.push_back({OP::END, OP::NOP});
                 break;
       default:  std::cout << "[ERROR] Could not understand \"" << buffer << "\"" << std::endl;
@@ -173,9 +223,10 @@ void simulateProgram(std::vector<std::array<int, 2>> &prog) {
 
   int bufferA, bufferB;
 
-  static_assert(OP::count == 6, "Define all operations!");
+  static_assert(OP::count == 9, "Define all operations!");
 
-  for (auto cmd : prog) {
+  for (int i = 0; i < prog.size(); i++) {
+    auto cmd = prog[i];
     switch(cmd[0]) {
       case OP::END:   // std::cout << "stackCounter: " << stackCounter << std::endl;
                       return;
@@ -212,12 +263,58 @@ void simulateProgram(std::vector<std::array<int, 2>> &prog) {
                       break;
       case OP::POP:   stackCounter--;
                       break;
-      default:        std::cout << "[ERROR] In simulateProgram: Undefined operation." << std::endl;
+      case OP::GT:    bufferA = stack[stackCounter--];
+                      bufferB = stack[stackCounter];
+                      if (bufferB > bufferA) {
+                        i = cmd[1] - 1;
+                      }
+                      break;
+      case OP::EQ:    bufferA = stack[stackCounter--];
+                      bufferB = stack[stackCounter];
+                      if (bufferB == bufferA) {
+                        i = cmd[1] - 1;
+                      }
+                      break;
+      case OP::LT:    bufferA = stack[stackCounter--];
+                      bufferB = stack[stackCounter];
+                      if (bufferB < bufferA) {
+                        i = cmd[1];
+                      }
+                      break;
+      // default:        std::cout << "[ERROR] In simulateProgram: Undefined operation." << std::endl;
+      // ^ currently OP::NOP lands here, but does not require any handling.
     }
   }
 }
 
 void compileProgram(std::vector<std::array<int, 2>> &prog) {
+  for (auto cmd : prog) {
+    std::cout << "cmd: " << cmd[0] << "\t | arg: " << cmd[1] << std::endl;
+  }
+  // TODO: Remove ^that. Just useful for debugging purposes.
   std::cout << "[ERROR] Compilation mode not yet implemented." << std::endl;
   exit(0);
+}
+
+int matchingIDsLine(std::vector<std::string> &file_contents, std::string &branchID, int minIndex) {
+  for (int i = minIndex; i < file_contents.size(); i++) {
+    if (file_contents[i][0] != '^') continue;
+    if (file_contents[i].length() > 2 && file_contents[i][3] != ' ' && branchID == file_contents[i].substr(2, file_contents[i].find(" ", 2))) {
+      return(i);
+    }
+  }
+
+  return(-1);
+}
+
+void printUsage(char *name) {
+  std::cout << name << " [OPTIONS] input_file\n" << std::endl;
+  std::cout << "OPTIONS:" << std::endl;
+  std::cout << "\t-c, -com, -compile: \tUse compilation-mode." << std::endl;
+  std::cout << "\t-s, -sim, -simulate: \tUse simulation-mode. (default)" << std::endl;
+  std::cout << "\t-o, -out: \t\tName of the output file. (compilation-mode only)" << std::endl;
+  std::cout << "\t-h, -help: \t\tDisplay this help.\n" << std::endl;
+  std::cout << "Example: " << std::endl;
+  std::cout << "\t" << name << " -s test.wS" << std::endl;
+  std::cout << "\t" << name << " -c -o myProg.o test.wS\n" << std::endl;
 }
