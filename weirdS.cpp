@@ -22,6 +22,7 @@ enum OP {
   GT,       // > Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last > last.
   EQ,       // = Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last == last.
   LT,       // < Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last < last.
+  JMP,      // ! (Unconditional) Jump to the ID given by the second argument.
   count,
 };
 
@@ -29,7 +30,7 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog);
 void readFile(char *input, std::vector<std::string> &output);
 void simulateProgram(std::vector<std::array<int, 2>> &prog);
 void compileProgram(std::vector<std::array<int, 2>> &prog);
-int matchingIDsLine(std::vector<std::string> &file_contents, std::string &branchID, int minIndex);
+int matchingIDsLine(std::vector<std::string> &file_contents, std::string &branchID);
 void printUsage(char *name);
 
 int main(int argc, char **argv) {
@@ -138,10 +139,19 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
   int branchEndLine;
 
   for (int i = 0; i < file_contents.size(); i++) {
-    static_assert(OP::count == 9, "Define all operations!");
+    static_assert(OP::count == 10, "Define all operations!");
 
     std::string buffer = file_contents[i];
     switch((int)buffer[0]) {
+      case 33:  // "!"
+                branchID = buffer.substr(2, buffer.find(" ", 2));  // make sure branchID does not contain trailing whitespace.
+                branchEndLine = matchingIDsLine(file_contents, branchID);
+                if (branchEndLine == -1) {
+                  std::cout << "[ERROR] JMP: Did not find matching branch-ID for \"" << branchID << "\"" << std::endl;
+                  exit(0);
+                }
+                prog.push_back({OP::JMP, branchEndLine});
+                break;
       case 43:  // "+"
                 prog.push_back({OP::ADD, buffer[2] == '\\' ? OP::POP : OP::END});
                 break;
@@ -156,7 +166,7 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
                 break;
       case 60:  // <
                 branchID = buffer.substr(2, buffer.find(" ", 2));  // make sure branchID does not contain trailing whitespace.
-                branchEndLine = matchingIDsLine(file_contents, branchID, i + 1);
+                branchEndLine = matchingIDsLine(file_contents, branchID);
                 if (branchEndLine == -1) {
                   std::cout << "[ERROR] LT: Did not find matching branch-ID for \"" << branchID << "\"" << std::endl;
                   exit(0);
@@ -165,7 +175,7 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
                 break;
       case 61:  // =
                 branchID = buffer.substr(2, buffer.find(" ", 2));
-                branchEndLine = matchingIDsLine(file_contents, branchID, i + 1);
+                branchEndLine = matchingIDsLine(file_contents, branchID);
                 if (branchEndLine == -1) {
                   std::cout << "[ERROR] EQ: Did not find matching branch-ID for \"" << branchID << "\"" << std::endl;
                   exit(0);
@@ -174,7 +184,7 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
                 break;
       case 62:  // >
                 branchID = buffer.substr(2, buffer.find(" ", 2));
-                branchEndLine = matchingIDsLine(file_contents, branchID, i + 1);
+                branchEndLine = matchingIDsLine(file_contents, branchID);
                 if (branchEndLine == -1) {
                   std::cout << "[ERROR] GT: Did not find matching branch-ID for \"" << branchID << "\"" << std::endl;
                   exit(0);
@@ -223,7 +233,7 @@ void simulateProgram(std::vector<std::array<int, 2>> &prog) {
 
   int bufferA, bufferB;
 
-  static_assert(OP::count == 9, "Define all operations!");
+  static_assert(OP::count == 10, "Define all operations!");
 
   for (int i = 0; i < prog.size(); i++) {
     auto cmd = prog[i];
@@ -281,6 +291,7 @@ void simulateProgram(std::vector<std::array<int, 2>> &prog) {
                         i = cmd[1];
                       }
                       break;
+      case OP::JMP:   i = cmd[1];
       // default:        std::cout << "[ERROR] In simulateProgram: Undefined operation." << std::endl;
       // ^ currently OP::NOP lands here, but does not require any handling.
     }
@@ -296,8 +307,8 @@ void compileProgram(std::vector<std::array<int, 2>> &prog) {
   exit(0);
 }
 
-int matchingIDsLine(std::vector<std::string> &file_contents, std::string &branchID, int minIndex) {
-  for (int i = minIndex; i < file_contents.size(); i++) {
+int matchingIDsLine(std::vector<std::string> &file_contents, std::string &branchID) {
+  for (int i = 0; i < file_contents.size(); i++) {
     if (file_contents[i][0] != '^') continue;
     if (file_contents[i].length() > 2 && file_contents[i][3] != ' ' && branchID == file_contents[i].substr(2, file_contents[i].find(" ", 2))) {
       return(i);
