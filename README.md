@@ -47,11 +47,11 @@ Branching example program:
 / 1     # Pushes 1.
 . ^     # Prints 1.
 ^       # End of Program.
-^ IN    # Jump point for the IN labeled comparison.
+^ IN    # End(point) of the IN labeled jump.
 / 2     # Pushes 2.
 . ^     # Prints 2.
 ^       # End of Program.
-^ OUT   # Jump point for the OUT labeled comparison.
+^ OUT   # End(point) of the OUT labeled jump.
 / -1    # Pushes -1.
 . ^     # Prints -1.
 ^       # End of program.
