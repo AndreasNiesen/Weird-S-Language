@@ -159,7 +159,7 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
                 prog.push_back({OP::SUB, buffer[2] == '\\' ? OP::POP : OP::END});
                 break;
       case 46:  // "."
-                prog.push_back({OP::DUMP, buffer[2] == '-' ? OP::END : OP::POP});
+                prog.push_back({OP::DUMP, buffer[2] == '\\' ? OP::POP : OP::END});
                 break;
       case 47:  // "/"
                 prog.push_back({OP::PUSH, atoi(buffer.c_str() + 2)});
