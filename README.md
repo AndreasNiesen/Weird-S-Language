@@ -10,7 +10,7 @@ Upcoming:
 <br>
 
 Possible operations so far:
- - END ("^"): End of the program. (No Operation as second argument).<br>
+ - END ("^"): End of the program. End(point) of a jump-based instruction, if second argument is given.<br>
  - PUSH ("/"): Pushes second argument onto the stack. (currently only ints, will add support for characters later on).<br>
  - ADD ("+"): Adds (and removes if POP is second argument) the last two entries on the stack and pushes the result.<br>
  - SUB ("-"): Subtracts (and removes if POP is second argument) the last from the second to last entry on the stack and pushes the result.<br>
