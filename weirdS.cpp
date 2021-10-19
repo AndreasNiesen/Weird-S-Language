@@ -13,16 +13,18 @@ enum {
 
 enum OP {
   NOP = -1, //   Not accessible from the outside.
-  END,      // ^ End of the program. (No Operation as second argument)
-  PUSH,     // / Pushes second argument onto the stack. (currently only ints, will add support for characters later on).
+  END,      // ^ End of the program. (Endpoint of jump if second argument is given)
+  PUSH,     // / Pushes second argument onto the stack. (currently only ints, will add support for characters later on)
   ADD,      // + Adds (and removes if OP::POP is second argument) the last two entries on the stack and pushes the result.
   SUB,      // - Subtracts (and removes if OP::POP is second argument) the last from the second to last entry on the stack and pushes the result.
   DUMP,     // . Prints last entry on stack and either discards entry (OP::POP) or keeps it (OP::END).
-  POP,      // \ Removes entry at stackCounter / last entry from stack.
+  POP,      // \ Removes last entry from stack. (Saves into ID given by second argument if given)
   GT,       // > Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last > last.
   EQ,       // = Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last == last.
   LT,       // < Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last < last.
   JMP,      // ! (Unconditional) Jump to the ID given by the second argument.
+  RSRV,     // ( Reserves place on the stack if ID in second argument not yet reserved. (Currently a single int per ID, will change it to be of variable size)
+  LOAD,     // ) Pushes the value in the ID given by the second argument on the stack.
   count,
 };
 
@@ -34,7 +36,6 @@ int matchingIDsLine(std::vector<std::string> &file_contents, std::string &branch
 void printUsage(char *name);
 
 int main(int argc, char **argv) {
-  int i = 0;
   int mode = SIMULATION; // default is Simulation mode.
   char *input = nullptr;
   char *compilationOutput = nullptr;
@@ -56,6 +57,7 @@ int main(int argc, char **argv) {
     {"h", 4},
   };
 
+  int i = 0;
   while (argv[++i] != nullptr) {
     if (argv[i][0] == '-') {
       if (options.find(argv[i] + 1) != options.end()) {
@@ -134,12 +136,14 @@ int main(int argc, char **argv) {
 
 void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
   std::vector<std::string> file_contents;
+  std::map<std::string, int> vars;
   readFile(input, file_contents);
   std::string branchID;
+  int counter = 0;
   int branchEndLine;
 
   for (int i = 0; i < file_contents.size(); i++) {
-    static_assert(OP::count == 10, "Define all operations!");
+    static_assert(OP::count == 12, "Define all operations!");
 
     std::string buffer = file_contents[i];
     switch((int)buffer[0]) {
@@ -151,6 +155,19 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
                   exit(0);
                 }
                 prog.push_back({OP::JMP, branchEndLine});
+                break;
+      case 40:  // (
+                branchID = buffer.substr(2, buffer.find(" ", 2));
+                vars[branchID] = counter;
+                prog.push_back({OP::RSRV, counter++});
+                break;
+      case 41:  // )
+                branchID = buffer.substr(2, buffer.find(" ", 2));
+                if (!vars.contains(branchID)) {
+                  std::cout << "[ERROR] Variable \"" << branchID << "\" needs to be registered before use" << std::endl;
+                  exit(0);
+                }
+                prog.push_back({OP::LOAD, vars[branchID]});
                 break;
       case 43:  // "+"
                 prog.push_back({OP::ADD, buffer[2] == '\\' ? OP::POP : OP::END});
@@ -192,6 +209,11 @@ void createProgram(char *input, std::vector<std::array<int, 2>> &prog) {
                 prog.push_back({OP::GT, branchEndLine});
                 break;
       case 92:  // "\"
+                if (buffer.length() > 2 && buffer[3] != ' ') {
+                  branchID = buffer.substr(2, buffer.find(" ", 2));
+                  prog.push_back({OP::POP, vars[branchID]});
+                  break;
+                }
                 prog.push_back({OP::POP, OP::NOP});
                 break;
       case 94:  // "^"
@@ -233,7 +255,7 @@ void simulateProgram(std::vector<std::array<int, 2>> &prog) {
 
   int bufferA, bufferB;
 
-  static_assert(OP::count == 10, "Define all operations!");
+  static_assert(OP::count == 12, "Define all operations!");
 
   for (int i = 0; i < prog.size(); i++) {
     auto cmd = prog[i];
@@ -271,7 +293,8 @@ void simulateProgram(std::vector<std::array<int, 2>> &prog) {
       case OP::DUMP:  std::cout << stack[stackCounter] << std::endl;
                       if (cmd[1] == OP::POP) stackCounter--;
                       break;
-      case OP::POP:   stackCounter--;
+      case OP::POP:   if (cmd[1] == OP::NOP) stackCounter--;
+                      else stack[cmd[1]] = stack[stackCounter--];
                       break;
       case OP::GT:    bufferA = stack[stackCounter--];
                       bufferB = stack[stackCounter];
@@ -292,6 +315,11 @@ void simulateProgram(std::vector<std::array<int, 2>> &prog) {
                       }
                       break;
       case OP::JMP:   i = cmd[1];
+                      break;
+      case OP::RSRV:  stack[++stackCounter] = cmd[1];
+                      break;
+      case OP::LOAD:  stack[++stackCounter] = stack[cmd[1]];
+                      break;
       // default:        std::cout << "[ERROR] In simulateProgram: Undefined operation." << std::endl;
       // ^ currently OP::NOP lands here, but does not require any handling.
     }
