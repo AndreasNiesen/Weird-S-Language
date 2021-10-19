@@ -10,18 +10,97 @@ Upcoming:
 <br>
 
 Possible operations so far:
- - END ("^"): End of the program. End(point) of a jump-based instruction, if second argument is given.
- - PUSH ("/"): Pushes second argument onto the stack. (currently only ints, will add support for characters later on).
- - ADD ("+"): Adds (and removes if POP is second argument) the last two entries on the stack and pushes the result.
- - SUB ("-"): Subtracts (and removes if POP is second argument) the last from the second to last entry on the stack and pushes the result.
- - DUMP ("."): Prints last entry on stack and either discards entry (POP) or keeps it (END).
- - POP ("\\"): Removes last entry from stack. If second argument is ID of a variable, saves popped value to variable.
- - GT (">"): Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last > last.
- - EQ ("="): Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last == last.
- - LT ("<") Compares the last two stack entries (removing the last one) and jumping to ID given by second argument, if second to last < last.
- - JMP ("!"): Unconditional jump to ID given by second argument.
- - RSRV ("("): Reserves place on stack for a variable with name given by second argument. (currently only saves a single int per ID - will be of variable size)
- - LOAD (")"): Pushes value in variable on the stack.
+<table>
+ <tr>
+  <th>Operation</th>
+  <th>Incode Symbol</th>
+  <th>
+   Parameters<br>
+   [Optional]
+  </th>
+  <th>Description</th>
+ </tr>
+ <tr>
+  <th>END</th>
+  <th>^</th>
+  <th>[string]</th>
+  <th>If no argument is given, end of program. Otherwise endpoint/jump-to-point for given ID.</th>
+ </tr>
+ <tr>
+  <th>PUSH</th>
+  <th>/</th>
+  <th>int</th>
+  <th>Pushes argument onto the stack.</th>
+ </tr>
+ <tr>
+  <th>ADD</th>
+  <th>+</th>
+  <th>END or POP</th>
+  <th>
+   Adds the second to last to the last value on the stack.<br>
+   If the argument is POP, removes both operands from the stack, before pushing the result.<br>
+   If the argument is END, leaves the stack and pushes the result.<br>
+  </th>
+ </tr>
+ <tr>
+  <th>SUB</th>
+  <th>-</th>
+  <th>END or POP</th>
+  <th>
+   Subtracts the last from the second to last value on the stack.<br>
+   If the argument is POP, removes both operands from the stack, before pushing the result.<br>
+   If the argument is END, leaves the stack and pushes the result.<br>
+  </th>
+ </tr>
+ <tr>
+  <th>DUMP</th>
+  <th>.</th>
+  <th>END or POP</th>
+  <th>Prints the last entry on the stack and either discards it (POP) or keeps it (END).</th>
+ </tr>
+ <tr>
+  <th>POP</th>
+  <th>\</th>
+  <th>[string]</th>
+  <th>Removes the last entry from the stack. If a reserved variable ID is given as argument, saves the popped value into it.</th>
+ </tr>
+ <tr>
+  <th>GT</th>
+  <th>></th>
+  <th>string</th>
+  <th>If second to last > last stack value, jump to endpoint/jump-to-point given in the argument.</th>
+ </tr>
+ <tr>
+  <th>EQ</th>
+  <th>=</th>
+  <th>string</th>
+  <th>If second to last == last stack value, jump to endpoint/jump-to-point given in the argument.</th>
+ </tr>
+ <tr>
+  <th>LT</th>
+  <th><</th>
+  <th>string</th>
+  <th>If second to last < last stack value, jump to endpoint/jump-to-point given in the argument.</th>
+ </tr>
+ <tr>
+  <th>JMP</th>
+  <th>!</th>
+  <th>string</th>
+  <th>Unconditional jump to endpoint/jump-to-point given in the argument.</th>
+ </tr>
+ <tr>
+  <th>RSRV</th>
+  <th>(</th>
+  <th>string</th>
+  <th>Reserves place on the stack for the variable with a name given in the argument.</th>
+ </tr>
+ <tr>
+  <th>LOAD</th>
+  <th>)</th>
+  <th>string</th>
+  <th>Pushes value in the variable of the (arguments) given name on the stack.</th>
+ </tr>
+</table>
 
 Single line comments are supported, marked by "#".
 
@@ -57,14 +136,14 @@ Looping example (Fibonacci Numbers):
 / 9
 
 # Print + Calculate Fibonacci
-^ FibLoop     # Endpoint of FibLoop jump.
-\ LoopCounter # Load prepared value (9) into the LoopCounter variable (removing it from the stack).
+^ FibLoop      # Endpoint of FibLoop jump.
+\ LoopCounter  # Load prepared value (9) into the LoopCounter variable (removing it from the stack).
 + ^
 . ^
-) LoopCounter # Pushes value stored at/in LoopCounter on the stack.
+) LoopCounter  # Pushes value stored at/in LoopCounter on the stack.
 / 1
 - \
 / 0
-> FibLoop     # If second to last stack-value (LoopCounter) > last stack-value (0) jump to FibLoop jump endpoint (removes 0 from the stack).
+> FibLoop      # If second to last stack-value (LoopCounter) > last stack-value (0) jump to FibLoop jump endpoint (removes 0 from the stack).
 ^
 ```
